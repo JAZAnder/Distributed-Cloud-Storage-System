@@ -77,8 +77,9 @@ func login(w http.ResponseWriter, r *http.Request) {
 		logEntry.Details = "Failed: " + err.Error()
 		db.Create(&logEntry)
 		responses.RespondWithError(r, w, http.StatusInternalServerError, err.Error())
+		return
 	} else {
-		quickLog.Log(userObj.Username,"ClaimGeneration",strconv.FormatUint(uint64(userObj.ID), 10),r.RemoteAddr,"","",claim.ExpiresAt.String())
+		quickLog.Log(userObj.Username,"ClaimGeneration",strconv.FormatUint(uint64(userObj.ID), 10),r.RemoteAddr,"","","Expiration: "+claim.ExpiresAt.String())
 	}
 	logEntry.Details = "Success"
 	db.Create(&logEntry)
