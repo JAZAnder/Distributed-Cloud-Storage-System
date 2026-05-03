@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/JAZAnder/Distributed-Cloud-Storage-System/client/internal/logic/session"
+
 )
 
 func CoordinatorRequests(method, path, data string) {
@@ -34,6 +35,7 @@ func CoordinatorRequests(method, path, data string) {
 		fmt.Println(err)
 		return
 	}
+	req.Header.Add("Authorization", "Bearer "+ currentSession.GetToken())
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := client.Do(req)

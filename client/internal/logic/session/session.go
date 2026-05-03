@@ -6,11 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
+
+	"golang.org/x/term"
+
 )
 
 type session struct {
@@ -40,6 +45,14 @@ const configFileName = "config.json"
 var once sync.Once
 var currentSession session
 
+type ConnectionResponse struct {
+	Claim string `json:"Claim"`
+}
+
+func (cs *session) GetToken() string {
+	return cs.jwt_SECRET
+}
+
 func GetSession() session {
 	once.Do(func() {
 		createSession()
@@ -50,11 +63,11 @@ func GetSession() session {
 func createSession() {
 	scanner := bufio.NewScanner(os.Stdin)
 
-	fmt.Print("Enter the Coordinator (Master) URL: ")
+	fmt.Print("\nEnter the Coordinator (Master) URL: ")
 	scanner.Scan()
 	currentSession.Coordinator.CoordinatorURL = "https://" + strings.TrimSpace(scanner.Text())
 
-	fmt.Print("Enter your Coordinator Username: ")
+	fmt.Print("\nEnter your Coordinator Username: ")
 	scanner.Scan()
 	currentSession.Coordinator.UserName = strings.TrimSpace(scanner.Text())
 
@@ -68,11 +81,19 @@ func Connect() {
 	if err != nil {
 		demo = false
 	}
+	if demo {
+		fmt.Println("\n\n- - THE CLIENT IS IN DEMO MODE!! -- TLS Certs will NOT be Verified - - \n\n")
+	}
 
-	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print("Enter your Coordinator Password: ")
-	scanner.Scan()
-	currentSession.coordinatorPassword = strings.TrimSpace(scanner.Text())
+	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		fmt.Println("\nError reading password:", err)
+		return
+	}
+
+	currentSession.coordinatorPassword = string(bytePassword)
+	fmt.Println("\n")
 
 	url := currentSession.Coordinator.CoordinatorURL + "/api/login"
 	method := "POST"
@@ -85,6 +106,7 @@ func Connect() {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		client = &http.Client{Transport: tr}
+
 	}
 
 	req, err := http.NewRequest(method, url, payload)
@@ -107,7 +129,20 @@ func Connect() {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(string(body))
+
+	var response ConnectionResponse
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		fmt.Println("Error parsing JSON: %v", err)
+	}
+
+	jwtToken := response.Claim
+	if jwtToken == "" {
+		log.Fatalln("Login Failed - Exiting Program\n")
+	}
+
+	fmt.Println("Extracted Token:", jwtToken)
 
 }
 
