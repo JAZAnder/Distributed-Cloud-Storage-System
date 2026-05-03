@@ -37,7 +37,7 @@ type coordinatorConfig struct {
 
 type nodeConfig struct {
 	UserName string `json:"username"`
-	NodeURL  string `json:"coordinator_url"`
+	NodeURL  string `json:"node_url"`
 }
 
 const configFileName = "config.json"
@@ -62,14 +62,25 @@ func GetSession() session {
 
 func createSession() {
 	scanner := bufio.NewScanner(os.Stdin)
+	if os.Getenv("COORDINATOR") == "" {
+		fmt.Print("\nEnter the Coordinator (Master) URL: ")
+		scanner.Scan()
 
-	fmt.Print("\nEnter the Coordinator (Master) URL: ")
-	scanner.Scan()
-	currentSession.Coordinator.CoordinatorURL = "https://" + strings.TrimSpace(scanner.Text())
+		currentSession.Coordinator.CoordinatorURL = "https://" + strings.TrimSpace(scanner.Text())
 
-	fmt.Print("\nEnter your Coordinator Username: ")
-	scanner.Scan()
-	currentSession.Coordinator.UserName = strings.TrimSpace(scanner.Text())
+	} else {
+		currentSession.Coordinator.CoordinatorURL = "https://" + os.Getenv("COORDINATOR")
+	}
+
+	if os.Getenv("USERNAME") == "" {
+		fmt.Print("\nEnter your Coordinator Username: ")
+		scanner.Scan()
+
+		currentSession.Coordinator.UserName = "https://" + strings.TrimSpace(scanner.Text())
+
+	} else {
+		currentSession.Coordinator.UserName = os.Getenv("COORDINATORUSERNAME")
+	}
 
 	return
 
@@ -88,7 +99,7 @@ func Connect() {
 	fmt.Print("Enter your Coordinator Password: ")
 	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
-		fmt.Println("\nError reading password:", err)
+		log.Fatalln("\nError reading password:", err)
 		return
 	}
 
@@ -134,7 +145,7 @@ func Connect() {
 
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		fmt.Println("Error parsing JSON: %v", err)
+		log.Fatalln("Error parsing JSON: %v", err)
 	}
 
 	jwtToken := response.Claim
@@ -142,6 +153,7 @@ func Connect() {
 		log.Fatalln("Login Failed - Exiting Program\n")
 	}
 
+	currentSession.jwt_SECRET = jwtToken
 	fmt.Println("Extracted Token:", jwtToken)
 
 }

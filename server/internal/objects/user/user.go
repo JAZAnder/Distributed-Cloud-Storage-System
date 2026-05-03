@@ -25,3 +25,8 @@ type JWTClaim struct {
 	UserID uint `json:"user_id"`
 	jwt.RegisteredClaims
 }
+
+type WhoAmIResponse struct {
+	UserID   uint   `json:"user_id"`
+	Username string `json:"username"`
+}

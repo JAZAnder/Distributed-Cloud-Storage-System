@@ -1,10 +1,12 @@
 package users
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -17,6 +19,53 @@ import (
 	"github.com/JAZAnder/Distributed-Cloud-Storage-System/server/internal/objects/user"
 
 )
+
+func whoami(w http.ResponseWriter, r *http.Request) {
+	secret := os.Getenv("JWT_SECRET")
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing Authorization Header", http.StatusUnauthorized)
+		return
+	}
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+	claims := &user.JWTClaim{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid Token", http.StatusUnauthorized)
+		fmt.Println([]byte(os.Getenv("JWT_SECRET")))
+		fmt.Println(tokenString)
+		fmt.Println(err)
+		return
+	}
+
+	db := database.GetDatabase()
+	var userObj user.User
+	if err := db.First(&userObj, claims.UserID).Error; err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	logEntry := securityLog.SecurityLog{
+		Principal:  userObj.Username,
+		Action:     "IDENTITY_CHECK",
+		ResourceID: strconv.FormatUint(uint64(userObj.ID), 10),
+		Details:    fmt.Sprintf("User %s requested their own profile", userObj.Username),
+	}
+	db.Create(&logEntry)
+
+	response := user.WhoAmIResponse{
+		UserID:   userObj.ID,
+		Username: userObj.Username,
+	}
+
+	responses.RespondWithJSON(r, w, http.StatusOK, response)
+
+	return
+}
 
 func login(w http.ResponseWriter, r *http.Request) {
 	db := database.GetDatabase()
@@ -79,7 +128,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		responses.RespondWithError(r, w, http.StatusInternalServerError, err.Error())
 		return
 	} else {
-		quickLog.Log(userObj.Username,"ClaimGeneration",strconv.FormatUint(uint64(userObj.ID), 10),r.RemoteAddr,"","","Expiration: "+claim.ExpiresAt.String())
+		quickLog.Log(userObj.Username, "ClaimGeneration", strconv.FormatUint(uint64(userObj.ID), 10), r.RemoteAddr, "", "", "Expiration: "+claim.ExpiresAt.String())
 	}
 	logEntry.Details = "Success"
 	db.Create(&logEntry)

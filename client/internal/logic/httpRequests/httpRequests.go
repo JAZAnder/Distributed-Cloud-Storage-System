@@ -13,7 +13,7 @@ import (
 
 )
 
-func CoordinatorRequests(method, path, data string) {
+func CoordinatorRequests(method, path, data string) ([]byte, error) {
 	demo, err := strconv.ParseBool(os.Getenv("DEMO"))
 	if err != nil {
 		demo = false
@@ -33,7 +33,7 @@ func CoordinatorRequests(method, path, data string) {
 
 	if err != nil {
 		fmt.Println(err)
-		return
+		return []byte{}, err
 	}
 	req.Header.Add("Authorization", "Bearer "+ currentSession.GetToken())
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -41,15 +41,17 @@ func CoordinatorRequests(method, path, data string) {
 	res, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return []byte{}, err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return []byte{}, err
 	}
-	fmt.Println(string(body))
+
+	//fmt.Println(string(body))
+	return body, nil
 
 }
