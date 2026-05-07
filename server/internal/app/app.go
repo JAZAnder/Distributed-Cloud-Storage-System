@@ -14,9 +14,9 @@ type App struct {
 
 func (a *App) Initialize() {
 
+	
 	//Creates Router
 	a.Router = mux.NewRouter()
-
 	a.initializeRoutes()
 
 }

@@ -9,6 +9,7 @@ type User struct {
 	gorm.Model
 	Username     string `gorm:"uniqueIndex"`
 	PasswordHash string
+	Role         string
 }
 
 type UserCreateDto struct {
@@ -24,6 +25,11 @@ type UserLoginDto struct {
 type JWTClaim struct {
 	UserID uint `json:"user_id"`
 	jwt.RegisteredClaims
+}
+
+// Valid implements jwt.Claims.
+func (j *JWTClaim) Valid() error {
+	panic("unimplemented")
 }
 
 type WhoAmIResponse struct {

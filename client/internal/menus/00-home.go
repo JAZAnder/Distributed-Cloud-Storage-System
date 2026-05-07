@@ -13,11 +13,13 @@ import (
 )
 
 var coordinatorURL string
-var nodeURL string
+var downloadNodeURL string
+var uploadNodeURL string
 func Home() {
 	currentSession := session.GetSession()
 	coordinatorURL = currentSession.Coordinator.CoordinatorURL
-	nodeURL = currentSession.Node.NodeURL 
+	downloadNodeURL = currentSession.Node.DownloadloadNodeURL 
+	uploadNodeURL = currentSession.Node.UploadNodeURL
 
 	ClearScreen()
 
@@ -27,7 +29,8 @@ func Home() {
 		message := `
 		
 		Currently connected to Coordinator: ` + coordinatorURL + `
-		Currently connected to Node: ` + nodeURL + `
+		Currently connected to Download Node: ` + downloadNodeURL + `
+		Currently connected to Upload Node: ` + uploadNodeURL + `
 		
 		- - - Distributed-Cloud-Storage-System - - - 
 			      - - - Main Menu - - -

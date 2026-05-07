@@ -17,14 +17,13 @@ import (
 	"github.com/JAZAnder/Distributed-Cloud-Storage-System/server/internal/helpers/responses"
 	"github.com/JAZAnder/Distributed-Cloud-Storage-System/server/internal/objects/securityLog"
 	"github.com/JAZAnder/Distributed-Cloud-Storage-System/server/internal/objects/user"
-
 )
 
 func whoami(w http.ResponseWriter, r *http.Request) {
 	secret := os.Getenv("JWT_SECRET")
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		http.Error(w, "Missing Authorization Header", http.StatusUnauthorized)
+		responses.RespondWithError(r, w, http.StatusUnauthorized, "Missing Authorization Header")
 		return
 	}
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
@@ -35,17 +34,14 @@ func whoami(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil || !token.Valid {
-		http.Error(w, "Invalid Token", http.StatusUnauthorized)
-		fmt.Println([]byte(os.Getenv("JWT_SECRET")))
-		fmt.Println(tokenString)
-		fmt.Println(err)
+		responses.RespondWithError(r, w, http.StatusUnauthorized, "Invalid Token")
 		return
 	}
 
 	db := database.GetDatabase()
 	var userObj user.User
 	if err := db.First(&userObj, claims.UserID).Error; err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		responses.RespondWithError(r, w, http.StatusNotFound, "User not found")
 		return
 	}
 

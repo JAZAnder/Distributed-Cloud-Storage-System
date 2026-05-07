@@ -15,7 +15,8 @@ func cid() {
 		message := `
 		
 		Currently connected to Coordinator: ` + coordinatorURL + `
-		Currently connected to Node: ` + nodeURL + `
+		Currently connected to Download Node: ` + downloadNodeURL + `
+		Currently connected to Upload Node: ` + uploadNodeURL + `
 		
 		- - - Distributed-Cloud-Storage-System - - - 
 			      - - - Manual Download Menu - - -

@@ -2,6 +2,9 @@ package session
 
 import (
 	"bufio"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -14,8 +17,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/fentec-project/gofe/abe"
 	"golang.org/x/term"
-
 )
 
 type session struct {
@@ -23,6 +26,8 @@ type session struct {
 	coordinatorPassword string
 	Coordinator         coordinatorConfig
 	Node                nodeConfig
+	PrivateKey          *abe.FAMEAttribKeys
+	PublicKey           *abe.FAMEPubKey
 }
 
 type configurationFile struct {
@@ -36,8 +41,8 @@ type coordinatorConfig struct {
 }
 
 type nodeConfig struct {
-	UserName string `json:"username"`
-	NodeURL  string `json:"node_url"`
+	UploadNodeURL       string `json:"upload_node_url"`
+	DownloadloadNodeURL string `json:"Downloadload_node_url"`
 }
 
 const configFileName = "config.json"
@@ -80,6 +85,26 @@ func createSession() {
 
 	} else {
 		currentSession.Coordinator.UserName = os.Getenv("COORDINATORUSERNAME")
+	}
+
+	if os.Getenv("DOWNLOADNODE") == "" {
+		fmt.Print("\nEnter the Download IPFS Node URL: ")
+		scanner.Scan()
+
+		currentSession.Coordinator.UserName = "https://" + strings.TrimSpace(scanner.Text())
+
+	} else {
+		currentSession.Coordinator.CoordinatorURL = os.Getenv("DOWNLOADNODE")
+	}
+
+	if os.Getenv("UPLOADNODE") == "" {
+		fmt.Print("\nEnter the Upload IPFS Node URL: ")
+		scanner.Scan()
+
+		currentSession.Coordinator.UserName = "https://" + strings.TrimSpace(scanner.Text())
+
+	} else {
+		currentSession.Coordinator.CoordinatorURL = os.Getenv("UPLOADNODE")
 	}
 
 	return
@@ -155,6 +180,7 @@ func Connect() {
 
 	currentSession.jwt_SECRET = jwtToken
 	fmt.Println("Extracted Token:", jwtToken)
+	currentSession.coordinatorPassword = " "
 
 }
 
@@ -200,4 +226,59 @@ func loadSession() error {
 		//Get Information and Offer to Save
 	}
 	return nil
+}
+
+func GetPrivateKey() (*abe.FAMEAttribKeys, error) {
+	const keyPath = "user_identity.key"
+
+	if currentSession.PrivateKey != nil {
+		return currentSession.PrivateKey, nil
+	} else {
+		if _, err := os.Stat(keyPath); err == nil {
+			fmt.Println("Found existing identity key. Loading...")
+			return loadAndDecryptKey(keyPath)
+		}
+
+	}
+	return nil, fmt.Errorf("No AttrKey Available")
+}
+
+func loadAndDecryptKey(keyPath string) (*abe.FAMEAttribKeys, error) {
+	fileData, _ := os.ReadFile(keyPath)
+
+	fmt.Print("Enter passphrase to unlock your private key: ")
+	passphrase, err := term.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return nil, err
+	}
+	key := sha256.Sum256(passphrase)
+
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	nonceSize := gcm.NonceSize()
+	if len(fileData) < nonceSize {
+		return nil, fmt.Errorf("ciphertext too short")
+	}
+
+	nonce, ciphertext := fileData[:nonceSize], fileData[nonceSize:]
+	decryptedJson, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, fmt.Errorf("incorrect passphrase: %w", err)
+	}
+
+	attribKeys := new(abe.FAMEAttribKeys)
+	err = json.Unmarshal(decryptedJson, attribKeys)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ABE keys: %w", err)
+	}
+	passphrase = nil
+
+	return attribKeys, nil
 }
