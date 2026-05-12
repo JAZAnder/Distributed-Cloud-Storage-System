@@ -19,6 +19,7 @@ import (
 
 	"github.com/fentec-project/gofe/abe"
 	"golang.org/x/term"
+
 )
 
 type session struct {
@@ -94,7 +95,7 @@ func createSession() {
 		currentSession.Coordinator.UserName = "https://" + strings.TrimSpace(scanner.Text())
 
 	} else {
-		currentSession.Coordinator.CoordinatorURL = os.Getenv("DOWNLOADNODE")
+		currentSession.Node.DownloadloadNodeURL = os.Getenv("DOWNLOADNODE")
 	}
 
 	if os.Getenv("UPLOADNODE") == "" {
@@ -104,7 +105,7 @@ func createSession() {
 		currentSession.Coordinator.UserName = "https://" + strings.TrimSpace(scanner.Text())
 
 	} else {
-		currentSession.Coordinator.CoordinatorURL = os.Getenv("UPLOADNODE")
+		currentSession.Node.UploadNodeURL = os.Getenv("UPLOADNODE")
 	}
 
 	return

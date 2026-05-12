@@ -25,7 +25,6 @@ func RequestAttrKey() (*abe.FAMEAttribKeys, error) {
 		return nil, fmt.Errorf("Error: The connected Coordinator lacks the MSK/KEK to mint keys.")
 	}
 
-	// 2. Decode the JSON response and Base64-encoded ABE key [21.4.1, History]
 	var keyResp struct {
 		PrivateKey string `json:"private_key"`
 	}
